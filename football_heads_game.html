@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Football Heads - Arcade Soccer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Fredoka+One&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #4c1d95;
+      font-family: 'Fredoka One', cursive, sans-serif;
+      user-select: none;
+      overflow: hidden;
+    }
+    .arcade-font {
+      font-family: 'Press Start 2P', monospace;
+    }
+    .arcade-border {
+      border: 4px solid #000;
+      box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), 4px 4px 0px rgba(255,255,255,0.3);
+    }
+    .yellow-btn {
+      background: linear-gradient(to bottom, #fde047, #eab308);
+      border: 4px solid #000;
+      box-shadow: 0 6px 0 #854d0e, inset 0 2px 0 #fef08a;
+    }
+    .yellow-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #854d0e, inset 0 2px 0 #fef08a;
+    }
+    .blue-btn {
+      background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+      border: 4px solid #000;
+      box-shadow: 0 6px 0 #1e3a8a, inset 0 2px 0 #93c5fd;
+    }
+    .blue-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #1e3a8a, inset 0 2px 0 #93c5fd;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center bg-purple-950 p-2 sm:p-4">
+
+  <!-- Main Game Container -->
+  <div class="relative w-full max-w-5xl bg-black rounded-2xl overflow-hidden shadow-2xl border-8 border-yellow-500 flex flex-col items-center">
+    
+    <!-- Game Canvas Screen -->
+    <div class="relative w-full aspect-[16/9] bg-sky-300 overflow-hidden">
+      <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+      <!-- Overlay Screens -->
+      <!-- 1. Start Menu -->
+      <div id="startMenu" class="absolute inset-0 bg-purple-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white z-20">
+        <h1 class="text-4xl sm:text-6xl text-yellow-400 arcade-font drop-shadow-[0_5px_0_#000] mb-2 tracking-wider">FOOTBALL HEADS</h1>
+        <p class="text-lg sm:text-2xl text-yellow-100 mb-8 drop-shadow">Edição Arcade Retro</p>
+        
+        <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+          <button id="btn1P" class="yellow-btn text-black text-xl py-4 px-6 rounded-xl font-bold flex-1 transition hover:scale-105">
+            ⚽ 1 JOGADOR (VS IA)
+          </button>
+          <button id="btn2P" class="blue-btn text-white text-xl py-4 px-6 rounded-xl font-bold flex-1 transition hover:scale-105">
+            👥 2 JOGADORES
+          </button>
+        </div>
+
+        <div class="mt-8 text-xs sm:text-sm bg-black/50 p-4 rounded-xl border border-purple-500/40 text-left max-w-md space-y-2">
+          <p class="text-yellow-300 font-bold">🎮 Controles:</p>
+          <p><span class="text-yellow-400">P1:</span> Setas (Mover/Pular) + Barra de Espaço (Chutar)</p>
+          <p><span class="text-cyan-400">P2:</span> A / D (Mover) + W (Pular) + S ou Shift (Chutar)</p>
+        </div>
+      </div>
+
+      <!-- 2. Goal Banner -->
+      <div id="goalBanner" class="hidden absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none z-10 animate-bounce">
+        <div class="bg-yellow-400 border-8 border-black px-12 py-6 rounded-3xl transform -rotate-3 shadow-[0_10px_0_#000]">
+          <h2 class="text-6xl sm:text-8xl arcade-font text-red-600 drop-shadow-[0_6px_0_#000]">GOOOOL!</h2>
+        </div>
+      </div>
+
+      <!-- 3. Pause Screen -->
+      <div id="pauseMenu" class="hidden absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-white z-20">
+        <h2 class="text-4xl sm:text-5xl text-yellow-400 arcade-font mb-6">JOGO PAUSADO</h2>
+        <button id="btnResume" class="yellow-btn text-black text-xl py-3 px-8 rounded-xl font-bold mb-4">CONTINUAR</button>
+        <button id="btnQuit" class="blue-btn text-white text-xl py-3 px-8 rounded-xl font-bold">MENU PRINCIPAL</button>
+      </div>
+
+      <!-- 4. Game Over Screen -->
+      <div id="gameOverMenu" class="hidden absolute inset-0 bg-purple-950/95 flex flex-col items-center justify-center text-white z-20">
+        <h2 id="winnerText" class="text-3xl sm:text-5xl text-yellow-400 arcade-font mb-4 text-center">JOGADOR 1 VENCEU!</h2>
+        <p id="finalScoreText" class="text-2xl text-white mb-8">Placar Final: 3 - 2</p>
+        <div class="flex gap-4">
+          <button id="btnRestart" class="yellow-btn text-black text-xl py-4 px-8 rounded-xl font-bold">JOGAR NOVAMENTE</button>
+          <button id="btnMenuFromEnd" class="blue-btn text-white text-xl py-4 px-8 rounded-xl font-bold">MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUD Bar (Friv Style) -->
+    <div class="w-full bg-gradient-to-b from-green-700 via-green-800 to-green-950 p-2 sm:p-3 border-t-4 border-black flex flex-wrap items-center justify-between gap-2">
+      
+      <!-- Controls Hint -->
+      <div class="yellow-btn text-black px-3 py-2 rounded-xl text-xs sm:text-sm font-bold flex flex-col justify-center shadow">
+        <span class="leading-tight">ARROW KEYS TO MOVE</span>
+        <span class="leading-tight">SPACEBAR TO KICK</span>
+      </div>
+
+      <!-- Time Center Box -->
+      <div class="yellow-btn text-black px-4 py-1 sm:py-2 rounded-xl text-center flex flex-col items-center min-w-[120px]">
+        <span class="text-xs uppercase font-extrabold tracking-wider">TIME</span>
+        <span id="hudTime" class="arcade-font text-xl sm:text-2xl">01:30</span>
+      </div>
+
+      <!-- Score Center Box -->
+      <div class="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-xl border-2 border-green-500/50">
+        <span class="text-white text-sm sm:text-base font-bold tracking-widest arcade-font">SCORES</span>
+        <span id="hudScore" class="arcade-font text-2xl sm:text-3xl text-yellow-400 drop-shadow-[0_2px_0_#000]">0 : 0</span>
+      </div>
+
+      <!-- Interactive Buttons Bar -->
+      <div class="flex items-center gap-2">
+        <button id="hudBtnPause" class="blue-btn text-white px-3 py-2 rounded-xl text-sm font-bold flex items-center justify-center min-w-[40px] h-[44px]">
+          ⏸
+        </button>
+        <button id="hudBtnSound" class="blue-btn text-white px-3 py-2 rounded-xl text-sm font-bold flex items-center justify-center min-w-[40px] h-[44px]">
+          🔊
+        </button>
+        <button id="hudBtnMenu" class="blue-btn text-white px-3 py-2 rounded-xl text-sm font-bold h-[44px] leading-none">
+          MENU
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Audio Synthesizer (Web Audio API) & Game Engine -->
+  <script>
+    // --- AUDIO SYNTHESIZER ---
+    class SoundEffects {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+      }
+      playKick() {
+        if (this.muted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+      }
+      playBounce() {
+        if (this.muted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.08);
+      }
+      playGoal() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        // Whistle effect
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1800, now);
+        osc.frequency.setValueAtTime(2400, now + 0.1);
+        osc.frequency.setValueAtTime(2000, now + 0.25);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(now + 0.6);
+      }
+      playPowerup() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.2);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(now + 0.25);
+      }
+    }
+
+    const sound = new SoundEffects();
+
+    // --- GAME ENGINE & CONSTANTS ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Virtual Resolution (Internal logical coordinates)
+    const V_WIDTH = 900;
+    const V_HEIGHT = 500;
+    canvas.width = V_WIDTH;
+    canvas.height = V_HEIGHT;
+
+    // Pitch Layout
+    const GROUND_Y = 410;
+    const GOAL_WIDTH = 110;
+    const GOAL_HEIGHT = 160;
+    const GOAL_TOP_Y = GROUND_Y - GOAL_HEIGHT;
+
+    // Power-up types
+    const POWERUP_TYPES = [
+      { id: 'SPEED', color: '#eab308', icon: '⚡', label: 'Speed' },
+      { id: 'JUMP', color: '#3b82f6', icon: '👟', label: 'High Jump' },
+      { id: 'BIG_BALL', color: '#ef4444', icon: '⚽', label: 'Big Ball' },
+      { id: 'FREEZE', color: '#06b6d4', icon: '❄️', label: 'Freeze Enemy' }
+    ];
+
+    // Game States
+    let is2PlayerMode = false;
+    let gameState = 'MENU'; // MENU, PLAYING, PAUSED, GOAL_RESET, GAMEOVER
+    let gameTime = 90; // seconds
+    let lastTimeCheck = 0;
+    let scoreP1 = 0;
+    let scoreP2 = 0;
+    let goalResetTimer = 0;
+
+    // Input States
+    const keys = {};
+
+    window.addEventListener('keydown', e => {
+      sound.init();
+      keys[e.code] = true;
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+    // --- GAME OBJECTS ---
+
+    // Ball Class
+    class Ball {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = V_WIDTH / 2;
+        this.y = 200;
+        this.vx = 0;
+        this.vy = 0;
+        this.baseRadius = 18;
+        this.radius = 18;
+        this.rotation = 0;
+        this.bounciness = 0.75;
+      }
+      update() {
+        // Gravity
+        this.vy += 0.45;
+
+        // Move
+        this.x += this.vx;
+        this.y += this.vy;
+        this.rotation += this.vx * 0.05;
+
+        // Friction / Air Drag
+        this.vx *= 0.992;
+
+        // Ground Bounce
+        if (this.y + this.radius > GROUND_Y) {
+          this.y = GROUND_Y - this.radius;
+          this.vy = -this.vy * this.bounciness;
+          if (Math.abs(this.vy) > 1.5) sound.playBounce();
+        }
+
+        // Ceiling Bounce
+        if (this.y - this.radius < 50) {
+          this.y = 50 + this.radius;
+          this.vy = -this.vy * 0.6;
+        }
+
+        // Left/Right Outer Walls
+        if (this.x - this.radius < 10 && this.y < GOAL_TOP_Y) {
+          this.x = 10 + this.radius;
+          this.vx = -this.vx * 0.7;
+        }
+        if (this.x + this.radius > V_WIDTH - 10 && this.y < GOAL_TOP_Y) {
+          this.x = V_WIDTH - 10 - this.radius;
+          this.vx = -this.vx * 0.7;
+        }
+
+        // Crossbar Collisions (Left & Right Goals)
+        this.checkCrossbarCollision(GOAL_WIDTH, GOAL_TOP_Y);
+        this.checkCrossbarCollision(V_WIDTH - GOAL_WIDTH, GOAL_TOP_Y);
+      }
+
+      checkCrossbarCollision(postX, postY) {
+        const dx = this.x - postX;
+        const dy = this.y - postY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < this.radius + 8) {
+          const angle = Math.atan2(dy, dx);
+          const overlap = (this.radius + 8) - dist;
+          this.x += Math.cos(angle) * overlap;
+          this.y += Math.sin(angle) * overlap;
+          
+          // Bounce off post
+          const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+          this.vx = Math.cos(angle) * Math.max(speed, 5);
+          this.vy = Math.sin(angle) * Math.max(speed, 5);
+          sound.playBounce();
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+
+        // Ball Body
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#000000';
+        ctx.stroke();
+
+        // Soccer Pentagon Pattern
+        ctx.fillStyle = '#000000';
+        for (let i = 0; i < 5; i++) {
+          const a = (i * Math.PI * 2) / 5;
+          ctx.beginPath();
+          ctx.arc(Math.cos(a) * (this.radius * 0.55), Math.sin(a) * (this.radius * 0.55), this.radius * 0.28, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    // Player Class
+    class Player {
+      constructor(id, x, isAI = false) {
+        this.id = id;
+        this.startX = x;
+        this.isAI = isAI;
+        this.reset();
+      }
+
+      reset() {
+        this.x = this.startX;
+        this.y = GROUND_Y;
+        this.vx = 0;
+        this.vy = 0;
+        this.headRadius = 38;
+        this.isGrounded = true;
+        
+        // Power-ups and Modifiers
+        this.speedMult = 1;
+        this.jumpMult = 1;
+        this.frozen = false;
+        this.freezeTimer = 0;
+        this.powerupTimer = 0;
+
+        // Shoe / Kick Animation
+        this.shoeAngle = 0;
+        this.isKicking = false;
+        this.kickCooldown = 0;
+        this.facing = this.id === 1 ? 1 : -1;
+      }
+
+      update(ball) {
+        // Freeze logic
+        if (this.freezeTimer > 0) {
+          this.freezeTimer--;
+          if (this.freezeTimer === 0) this.frozen = false;
+        }
+        if (this.powerupTimer > 0) {
+          this.powerupTimer--;
+          if (this.powerupTimer === 0) {
+            this.speedMult = 1;
+            this.jumpMult = 1;
+          }
+        }
+
+        if (!this.frozen) {
+          if (this.isAI) {
+            this.updateAI(ball);
+          } else {
+            this.updateControls();
+          }
+        }
+
+        // Apply Movement Physics
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.55; // Gravity
+
+        // Ground constraint
+        if (this.y >= GROUND_Y) {
+          this.y = GROUND_Y;
+          this.vy = 0;
+          this.isGrounded = true;
+        }
+
+        // Field boundaries
+        if (this.id === 1) {
+          if (this.x - this.headRadius < 15) this.x = 15 + this.headRadius;
+          if (this.x + this.headRadius > V_WIDTH - 20) this.x = V_WIDTH - 20 - this.headRadius;
+        } else {
+          if (this.x - this.headRadius < 20) this.x = 20 + this.headRadius;
+          if (this.x + this.headRadius > V_WIDTH - 15) this.x = V_WIDTH - 15 - this.headRadius;
+        }
+
+        // Kick Animation
+        if (this.isKicking) {
+          this.shoeAngle += 0.35 * this.facing;
+          if (Math.abs(this.shoeAngle) > 1.2) {
+            this.isKicking = false;
+          }
+        } else {
+          this.shoeAngle *= 0.7;
+        }
+
+        if (this.kickCooldown > 0) this.kickCooldown--;
+
+        // Collisions
+        this.checkBallCollision(ball);
+      }
+
+      updateControls() {
+        const moveSpeed = 5.5 * this.speedMult;
+        const jumpForce = -12.5 * this.jumpMult;
+
+        this.vx = 0;
+
+        if (this.id === 1) {
+          if (keys['ArrowLeft']) this.vx = -moveSpeed;
+          if (keys['ArrowRight']) this.vx = moveSpeed;
+          if (keys['ArrowUp'] && this.isGrounded) {
+            this.vy = jumpForce;
+            this.isGrounded = false;
+            sound.playBounce();
+          }
+          if (keys['Space'] && !this.isKicking && this.kickCooldown === 0) {
+            this.kick();
+          }
+        } else if (this.id === 2) {
+          if (keys['KeyA']) this.vx = -moveSpeed;
+          if (keys['KeyD']) this.vx = moveSpeed;
+          if (keys['KeyW'] && this.isGrounded) {
+            this.vy = jumpForce;
+            this.isGrounded = false;
+            sound.playBounce();
+          }
+          if ((keys['KeyS'] || keys['ShiftRight']) && !this.isKicking && this.kickCooldown === 0) {
+            this.kick();
+          }
+        }
+      }
+
+      updateAI(ball) {
+        const moveSpeed = 4.8 * this.speedMult;
+        const targetX = ball.x + 30; // Position behind ball to push left
+
+        if (this.x < targetX - 10) this.vx = moveSpeed;
+        else if (this.x > targetX + 10) this.vx = -moveSpeed;
+        else this.vx = 0;
+
+        // Jump if ball is high and near
+        if (ball.x > V_WIDTH / 2 && Math.abs(ball.x - this.x) < 80 && ball.y < GROUND_Y - 70 && this.isGrounded) {
+          this.vy = -12 * this.jumpMult;
+          this.isGrounded = false;
+        }
+
+        // Kick if ball is close
+        if (Math.hypot(ball.x - this.x, ball.y - (this.y - 30)) < 90 && this.kickCooldown === 0) {
+          this.kick();
+        }
+      }
+
+      kick() {
+        this.isKicking = true;
+        this.kickCooldown = 18;
+        sound.playKick();
+      }
+
+      checkBallCollision(ball) {
+        // Head Collision (Circle vs Circle)
+        const headY = this.y - this.headRadius - 10;
+        const dx = ball.x - this.x;
+        const dy = ball.y - headY;
+        const dist = Math.hypot(dx, dy);
+        const minDist = ball.radius + this.headRadius;
+
+        if (dist < minDist) {
+          const angle = Math.atan2(dy, dx);
+          const overlap = minDist - dist;
+          ball.x += Math.cos(angle) * overlap;
+          ball.y += Math.sin(angle) * overlap;
+
+          const force = 9;
+          ball.vx = Math.cos(angle) * force + this.vx * 0.5;
+          ball.vy = Math.sin(angle) * force + this.vy * 0.5;
+          sound.playBounce();
+        }
+
+        // Shoe Collision (Circle vs Circle at shoe offset)
+        const shoeX = this.x + (this.facing * 30) + Math.sin(this.shoeAngle) * 20;
+        const shoeY = this.y - 12;
+        const sDx = ball.x - shoeX;
+        const sDy = ball.y - shoeY;
+        const sDist = Math.hypot(sDx, sDy);
+
+        if (sDist < ball.radius + 22) {
+          const kickMultiplier = this.isKicking ? 16 : 8;
+          const angle = Math.atan2(sDy, sDx);
+          ball.vx = Math.cos(angle) * kickMultiplier + (this.facing * 4);
+          ball.vy = Math.sin(angle) * kickMultiplier - 3;
+          sound.playKick();
+        }
+      }
+
+      draw() {
+        ctx.save();
+
+        const headY = this.y - this.headRadius - 10;
+
+        // Frozen Effect Glow
+        if (this.frozen) {
+          ctx.shadowColor = '#06b6d4';
+          ctx.shadowBlur = 20;
+        }
+
+        // --- Body / Torso ---
+        ctx.fillStyle = this.id === 1 ? '#ef4444' : '#3b82f6';
+        ctx.beginPath();
+        ctx.roundRect(this.x - 18, this.y - 30, 36, 25, 8);
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#000000';
+        ctx.stroke();
+
+        // --- Shoe ---
+        const shoeX = this.x + (this.facing * 25);
+        const shoeY = this.y - 12;
+        ctx.save();
+        ctx.translate(shoeX, shoeY);
+        ctx.rotate(this.shoeAngle);
+        
+        // Shoe Base (Black/White Sneaker)
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 22, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Shoe Stripes
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-6, -8, 4, 14);
+        ctx.fillRect(2, -8, 4, 14);
+        ctx.restore();
+
+        // --- Big Head ---
+        ctx.fillStyle = this.id === 1 ? '#fca5a5' : '#fef08a'; // Skin tone
+        ctx.beginPath();
+        ctx.arc(this.x, headY, this.headRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Hair
+        ctx.fillStyle = this.id === 1 ? '#451a03' : '#1e1b4b';
+        ctx.beginPath();
+        ctx.arc(this.x, headY - 8, this.headRadius * 0.95, Math.PI, Math.PI * 2);
+        ctx.fill();
+
+        // Face Features (Eyes, Eyebrows, Smile)
+        const eyeOffset = this.facing * 14;
+        
+        // Eye
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(this.x + eyeOffset, headY - 4, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Pupil
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(this.x + eyeOffset + (this.facing * 3), headY - 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyebrow
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(this.x + eyeOffset - 8, headY - 16);
+        ctx.lineTo(this.x + eyeOffset + 8, headY - 12);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+    }
+
+    // Floating Power-up Bubble Class
+    class Powerup {
+      constructor() {
+        this.active = false;
+        this.x = 0;
+        this.y = 0;
+        this.type = null;
+        this.floatTimer = 0;
+      }
+
+      spawn() {
+        this.active = true;
+        this.x = V_WIDTH / 4 + Math.random() * (V_WIDTH / 2);
+        this.y = 140 + Math.random() * 80;
+        this.type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+        this.floatTimer = 0;
+      }
+
+      update(ball, p1, p2) {
+        if (!this.active) return;
+
+        this.floatTimer += 0.05;
+        const currentY = this.y + Math.sin(this.floatTimer) * 8;
+
+        // Check Ball Hit
+        if (Math.hypot(ball.x - this.x, ball.y - currentY) < ball.radius + 22) {
+          this.applyEffect(ball.vx > 0 ? p1 : p2, ball.vx > 0 ? p2 : p1, ball);
+          this.active = false;
+        }
+      }
+
+      applyEffect(beneficiary, opponent, ball) {
+        sound.playPowerup();
+        switch (this.type.id) {
+          case 'SPEED':
+            beneficiary.speedMult = 1.6;
+            beneficiary.powerupTimer = 300;
+            break;
+          case 'JUMP':
+            beneficiary.jumpMult = 1.45;
+            beneficiary.powerupTimer = 300;
+            break;
+          case 'BIG_BALL':
+            ball.radius = 32;
+            setTimeout(() => { ball.radius = ball.baseRadius; }, 6000);
+            break;
+          case 'FREEZE':
+            opponent.frozen = true;
+            opponent.freezeTimer = 150;
+            break;
+        }
+      }
+
+      draw() {
+        if (!this.active) return;
+
+        const currentY = this.y + Math.sin(this.floatTimer) * 8;
+
+        ctx.save();
+        ctx.translate(this.x, currentY);
+
+        // Glowing Aura
+        ctx.shadowColor = this.type.color;
+        ctx.shadowBlur = 15;
+
+        // Outer Bubble
+        ctx.fillStyle = this.type.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        // Icon Text
+        ctx.shadowBlur = 0;
+        ctx.font = '18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.type.icon, 0, 1);
+
+        ctx.restore();
+      }
+    }
+
+    // --- INSTANTIATE GAME OBJECTS ---
+    const ball = new Ball();
+    const player1 = new Player(1, 180, false);
+    const player2 = new Player(2, V_WIDTH - 180, true);
+    const powerup = new Powerup();
+
+    // Spawn Powerup interval
+    setInterval(() => {
+      if (gameState === 'PLAYING' && !powerup.active && Math.random() < 0.6) {
+        powerup.spawn();
+      }
+    }, 10000);
+
+    // --- STADIUM & GRAPHICS RENDERING ---
+    function drawStadium() {
+      // 1. Sky Gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, 250);
+      skyGrad.addColorStop(0, '#38bdf8');
+      skyGrad.addColorStop(1, '#bae6fd');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, V_WIDTH, 250);
+
+      // 2. Crowd Bleachers / Stands
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(0, 160, V_WIDTH, 120);
+      
+      // Draw Crowd Pixels/Avatars
+      for (let row = 0; row < 4; row++) {
+        const y = 175 + row * 24;
+        for (let col = 15; col < V_WIDTH - 15; col += 24) {
+          const colorIndex = (row * 37 + col) % 5;
+          const colors = ['#ef4444', '#3b82f6', '#eab308', '#22c55e', '#a855f7'];
+          
+          // Crowd head
+          ctx.fillStyle = '#fde047';
+          ctx.beginPath();
+          ctx.arc(col, y - 6, 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Crowd shirt
+          ctx.fillStyle = colors[colorIndex];
+          ctx.fillRect(col - 6, y, 12, 10);
+        }
+      }
+
+      // Bleacher Rails
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, 280);
+      ctx.lineTo(V_WIDTH, 280);
+      ctx.stroke();
+
+      // 3. Red LED Advertising Barrier
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(0, 280, V_WIDTH, 35);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000';
+      ctx.strokeRect(0, 280, V_WIDTH, 35);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '14px "Press Start 2P"';
+      ctx.textAlign = 'center';
+      ctx.fillText('FOOTBALL HEADS ★ FRIV ARCADE ★ GOAL!', V_WIDTH / 2, 303);
+
+      // 4. Grass Field
+      const grassGrad = ctx.createLinearGradient(0, 315, 0, GROUND_Y);
+      grassGrad.addColorStop(0, '#22c55e');
+      grassGrad.addColorStop(1, '#15803d');
+      ctx.fillStyle = grassGrad;
+      ctx.fillRect(0, 315, V_WIDTH, V_HEIGHT - 315);
+
+      // Pitch Grass Stripes
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      for (let x = 0; x < V_WIDTH; x += 80) {
+        ctx.fillRect(x, 315, 40, V_HEIGHT - 315);
+      }
+
+      // Center Line and Center Circle
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(V_WIDTH / 2, 315);
+      ctx.lineTo(V_WIDTH / 2, GROUND_Y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(V_WIDTH / 2, GROUND_Y, 60, Math.PI, 0);
+      ctx.stroke();
+
+      // Pitch Ground Line
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.lineTo(V_WIDTH, GROUND_Y);
+      ctx.stroke();
+    }
+
+    function drawGoals() {
+      // Left Goal Net
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillRect(10, GOAL_TOP_Y, GOAL_WIDTH - 10, GOAL_HEIGHT);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      for (let x = 10; x < GOAL_WIDTH; x += 12) {
+        ctx.beginPath(); ctx.moveTo(x, GOAL_TOP_Y); ctx.lineTo(x, GROUND_Y); ctx.stroke();
+      }
+      for (let y = GOAL_TOP_Y; y < GROUND_Y; y += 12) {
+        ctx.beginPath(); ctx.moveTo(10, y); ctx.lineTo(GOAL_WIDTH, y); ctx.stroke();
+      }
+
+      // Left Goal Post Frame
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(10, GOAL_TOP_Y, GOAL_WIDTH - 10, GOAL_HEIGHT);
+
+      // Right Goal Net
+      const rightX = V_WIDTH - GOAL_WIDTH;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillRect(rightX, GOAL_TOP_Y, GOAL_WIDTH - 10, GOAL_HEIGHT);
+      for (let x = rightX; x < V_WIDTH - 10; x += 12) {
+        ctx.beginPath(); ctx.moveTo(x, GOAL_TOP_Y); ctx.lineTo(x, GROUND_Y); ctx.stroke();
+      }
+      for (let y = GOAL_TOP_Y; y < GROUND_Y; y += 12) {
+        ctx.beginPath(); ctx.moveTo(rightX, y); ctx.lineTo(V_WIDTH - 10, y); ctx.stroke();
+      }
+
+      // Right Goal Post Frame
+      ctx.strokeRect(rightX, GOAL_TOP_Y, GOAL_WIDTH - 10, GOAL_HEIGHT);
+    }
+
+    // --- GOAL DETECTION & GAME LOGIC ---
+    function checkGoal() {
+      if (gameState !== 'PLAYING') return;
+
+      // Ball inside Left Goal (P2 Scores)
+      if (ball.x + ball.radius < GOAL_WIDTH && ball.y > GOAL_TOP_Y) {
+        scoreP2++;
+        triggerGoal();
+      }
+
+      // Ball inside Right Goal (P1 Scores)
+      if (ball.x - ball.radius > V_WIDTH - GOAL_WIDTH && ball.y > GOAL_TOP_Y) {
+        scoreP1++;
+        triggerGoal();
+      }
+    }
+
+    function triggerGoal() {
+      gameState = 'GOAL_RESET';
+      goalResetTimer = 120; // 2 seconds delay
+      sound.playGoal();
+      document.getElementById('goalBanner').classList.remove('hidden');
+      updateHUD();
+    }
+
+    function resetPositions() {
+      ball.reset();
+      player1.reset();
+      player2.reset();
+    }
+
+    function updateTimer(timestamp) {
+      if (gameState !== 'PLAYING') return;
+
+      if (!lastTimeCheck) lastTimeCheck = timestamp;
+      if (timestamp - lastTimeCheck >= 1000) {
+        gameTime--;
+        lastTimeCheck = timestamp;
+        updateHUD();
+
+        if (gameTime <= 0) {
+          endGame();
+        }
+      }
+    }
+
+    function updateHUD() {
+      const mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
+      const secs = (gameTime % 60).toString().padStart(2, '0');
+      document.getElementById('hudTime').textContent = `${mins}:${secs}`;
+      document.getElementById('hudScore').textContent = `${scoreP1} : ${scoreP2}`;
+    }
+
+    function endGame() {
+      gameState = 'GAMEOVER';
+      const winnerText = document.getElementById('winnerText');
+      if (scoreP1 > scoreP2) {
+        winnerText.textContent = 'JOGADOR 1 VENCEU!';
+        winnerText.className = 'text-3xl sm:text-5xl text-yellow-400 arcade-font mb-4 text-center';
+      } else if (scoreP2 > scoreP1) {
+        winnerText.textContent = is2PlayerMode ? 'JOGADOR 2 VENCEU!' : 'COMPUTADOR VENCEU!';
+        winnerText.className = 'text-3xl sm:text-5xl text-blue-400 arcade-font mb-4 text-center';
+      } else {
+        winnerText.textContent = 'EMPATE!';
+        winnerText.className = 'text-3xl sm:text-5xl text-white arcade-font mb-4 text-center';
+      }
+
+      document.getElementById('finalScoreText').textContent = `Placar Final: ${scoreP1} - ${scoreP2}`;
+      document.getElementById('gameOverMenu').classList.remove('hidden');
+    }
+
+    // --- MAIN GAME LOOP ---
+    function gameLoop(timestamp) {
+      // 1. Clear Screen
+      ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
+
+      // 2. Render Environment
+      drawStadium();
+      drawGoals();
+
+      // 3. State Processing
+      if (gameState === 'PLAYING') {
+        updateTimer(timestamp);
+        player1.update(ball);
+        player2.update(ball);
+        ball.update();
+        powerup.update(ball, player1, player2);
+        checkGoal();
+      } else if (gameState === 'GOAL_RESET') {
+        goalResetTimer--;
+        if (goalResetTimer <= 0) {
+          document.getElementById('goalBanner').classList.add('hidden');
+          resetPositions();
+          gameState = 'PLAYING';
+        }
+      }
+
+      // 4. Render Game Objects
+      powerup.draw();
+      player1.draw();
+      player2.draw();
+      ball.draw();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // --- MENU CONTROLS & EVENT LISTENERS ---
+    function startMatch(twoPlayers) {
+      is2PlayerMode = twoPlayers;
+      scoreP1 = 0;
+      scoreP2 = 0;
+      gameTime = 90;
+      player2.isAI = !twoPlayers;
+      
+      resetPositions();
+      updateHUD();
+
+      document.getElementById('startMenu').classList.add('hidden');
+      document.getElementById('gameOverMenu').classList.add('hidden');
+      document.getElementById('pauseMenu').classList.add('hidden');
+      
+      gameState = 'PLAYING';
+    }
+
+    document.getElementById('btn1P').addEventListener('click', () => startMatch(false));
+    document.getElementById('btn2P').addEventListener('click', () => startMatch(true));
+    document.getElementById('btnRestart').addEventListener('click', () => startMatch(is2PlayerMode));
+    
+    document.getElementById('btnResume').addEventListener('click', () => {
+      document.getElementById('pauseMenu').classList.add('hidden');
+      gameState = 'PLAYING';
+    });
+
+    document.getElementById('btnQuit').addEventListener('click', showMainMenu);
+    document.getElementById('btnMenuFromEnd').addEventListener('click', showMainMenu);
+    document.getElementById('hudBtnMenu').addEventListener('click', showMainMenu);
+
+    function showMainMenu() {
+      gameState = 'MENU';
+      document.getElementById('startMenu').classList.remove('hidden');
+      document.getElementById('gameOverMenu').classList.add('hidden');
+      document.getElementById('pauseMenu').classList.add('hidden');
+    }
+
+    document.getElementById('hudBtnPause').addEventListener('click', () => {
+      if (gameState === 'PLAYING') {
+        gameState = 'PAUSED';
+        document.getElementById('pauseMenu').classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('hudBtnSound').addEventListener('click', (e) => {
+      sound.muted = !sound.muted;
+      e.target.textContent = sound.muted ? '🔇' : '🔊';
+    });
+
+    // Initialize Animation Loop on Load
+    window.onload = () => {
+      requestAnimationFrame(gameLoop);
+    };
+  </script>
+</body>
+</html>
